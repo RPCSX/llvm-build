@@ -26,9 +26,6 @@ jobs:
           - os: linux
             arch: aarch64
             arch-tripple: aarch64
-          - os: macos
-            arch: aarch64
-            arch-tripple: aarch64
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.runtime }}
     runs-on: ${{ matrix.os }}-latest
     env:
