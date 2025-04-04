@@ -8,25 +8,25 @@ on:
         type: string
 
 jobs:
-  build:
+  windows-build:
+    strategy:
+      matrix:
+        include:
+          - runtime: MD
+            arch: x64
+            arch-tripple: x86_64
+          - runtime: MT
+            arch: x64
+            arch-tripple: x86_64
+    name: Windows ${{ matrix.arch }} ${{ matrix.runtime }}
     runs-on: windows-2025
+    env:
+      PACKAGE_NAME: windows-${{ matrix.arch }}-${{ matrix.runtime }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-          lfs: true
-
       - name: Configure LLVM
         run: |
-          git clone https://github.com/llvm/llvm-project.git
-          cd llvm-project
-          git checkout llvmorg-${{ inputs.checkoutversion }}
-          cd ..
-          mkdir llvm_build
-          cd llvm_build
-          cmake -G "Visual Studio 17 2022" ../llvm-project/llvm -Thost=x64 -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=x86_64-pc-windows-msvc -DLLVM_HOST_TRIPLE:STRING=x86_64-pc-windows-msvc -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DCMAKE_SYSTEM_VERSION=10.0.26100 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=10.0.26100 -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT
+          git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
+          cmake -G "Visual Studio 17 2022" -B llvm_build -S llvm-project/llvm -Thost=${{ matrix.arch }} -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=x86_64-pc-windows-msvc -DLLVM_HOST_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-windows-msvc -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DCMAKE_SYSTEM_VERSION=10.0.26100 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=10.0.26100 -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=${{ matrix.runtime }}
 
       - name: Build LLVM
         run: |
@@ -59,15 +59,16 @@ jobs:
           xcopy "..\..\..\llvm_build\include" ".\include" /E
           xcopy "..\..\..\llvm_build\lib\cmake" ".\lib\cmake" /E
           cd ..\
-          7z a -t7z -m0=lzma2 -mx=9 -aoa -r "llvmlibs_mt.7z" *
+          7z a -t7z -m0=lzma2 -mx=9 -aoa -r "${{ env.PACKAGE_NAME }}.7z" *
 
       - name: Generate sha256
         run: |
           cd llvm_out/build
-          sha256sum llvmlibs_mt.7z | awk '{ print $1 }' > llvmlibs_mt.7z.sha256
+          sha256sum ${{ env.PACKAGE_NAME }}.7z | awk '{ print $1 }' > ${{ env.PACKAGE_NAME }}.7z.sha256
 
       - name: Upload Release
         uses: actions/upload-artifact@main
         with:
-          name: llvmlibs_mt
-          path: llvm_out/build/llvmlibs_mt.7z
+          name: ${{ env.PACKAGE_NAME }}
+          path: llvm_out/build/${{ env.PACKAGE_NAME }}.7z
+          compression: 0
