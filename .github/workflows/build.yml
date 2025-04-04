@@ -49,7 +49,7 @@ jobs:
           cmake -B llvm_build -S llvm-project/llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir" -Thost=${{ matrix.arch }} -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF
 
       - name: Build LLVM
-        run: cmake --build llvm_build --target=package -j$(nproc)
+        run: cmake --build llvm_build --target=package -- /maxcpucount
 
       - name: Show packages
         run: ls llvm_build
