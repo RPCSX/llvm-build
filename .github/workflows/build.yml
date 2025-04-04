@@ -34,6 +34,16 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
 
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+            root-reserve-mb: 16384
+            swap-size-mb: 16384
+            remove-dotnet: 'true'
+            remove-haskell: 'true'
+            remove-codeql: 'true'
+            remove-docker-images: 'true'
+
       - name: Clone LLVM
         run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
 
