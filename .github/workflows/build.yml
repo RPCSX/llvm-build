@@ -26,12 +26,6 @@ jobs:
           - os: linux
             arch: aarch64
             arch-tripple: aarch64
-          - os: freebsd
-            arch: x64
-            arch-tripple: x86_64
-          - os: freebsd
-            arch: aarch64
-            arch-tripple: aarch64
           - os: macos
             arch: aarch64
             arch-tripple: aarch64
