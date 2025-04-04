@@ -7,6 +7,10 @@ on:
         description: Git Checkout Version
         type: string
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
