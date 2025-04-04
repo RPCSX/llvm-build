@@ -68,7 +68,7 @@ jobs:
 
       - name: Build LLVM (Other)
         if: matrix.os != 'windows'
-        run: cmake --build llvm_build --target=package --j=$(nproc)
+        run: cmake --build llvm_build --target=package
 
       - name: Show packages
         run: ls -la llvm_build
