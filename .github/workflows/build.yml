@@ -24,27 +24,30 @@ jobs:
             arch: x64
             arch-tripple: x86_64
             runtime: MT
-          - os: linux
+          - os: ubuntu
             arch: x64
             arch-tripple: x86_64
-          - os: linux
+          - os: ubuntu
             arch: aarch64
             arch-tripple: aarch64
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.runtime }}
     runs-on: ${{ matrix.os }}-latest
-    env:
-      PACKAGE_NAME: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.runtime }}
+
     steps:
       - name: Clone LLVM
         run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
 
-      - name: Configure LLVM
+      - name: Configure LLVM (Windows)
         if: matrix.os == 'windows'
+        env:
+          PACKAGE_NAME: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.runtime }}
         run: |
           cmake -G "Visual Studio 17 2022" -B llvm_build -S llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;mlir" -Thost=${{ matrix.arch }} -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-windows-msvc -DLLVM_HOST_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-${{ matrix.os }}-msvc -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DCMAKE_SYSTEM_VERSION=10.0.26100 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=10.0.26100 -DLLVM_USE_CRT_DEBUG=${{ matrix.runtime }}d -DLLVM_USE_CRT_RELEASE=${{ matrix.runtime }}
 
-      - name: Configure LLVM
+      - name: Configure LLVM (Other)
         if: matrix.os != 'windows'
+        env:
+          PACKAGE_NAME: ${{ matrix.os }}-${{ matrix.arch }}
         run: |
           cmake -B llvm_build -S llvm-project/llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir" -Thost=${{ matrix.arch }} -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF
 
