@@ -8,7 +8,7 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.event_name }}
+  group: ${{ github.ref }}-${{ github.event_name }}-${{ inputs.checkoutversion }}
   cancel-in-progress: true
 
 jobs:
@@ -69,15 +69,19 @@ jobs:
 
       - name: Build LLVM (Windows)
         if: matrix.os == 'windows'
-        run: cmake --build llvm_build --target=package -- /maxcpucount
+        run: cmake --build llvm_build --config Release --target=package -- /maxcpucount
 
       - name: Build LLVM (Other)
         if: matrix.os != 'windows'
         run: cmake --build llvm_build --target=package
 
+      - name: Move Package
+        run: mv llvm_build/*.7z ${{ env.PACKAGE_NAME }}
+
       - name: Upload Release
-        uses: actions/upload-artifact@main
+        uses: softprops/action-gh-release@v2
         with:
-          name: ${{ env.PACKAGE_NAME }}.7z
-          path: llvm_build/*.7z
-          compression: 0
+          tag_name: ${{ inputs.checkoutversion }}
+          prerelease: false
+          make_latest: true
+          files: ${{ env.PACKAGE_NAME }}
