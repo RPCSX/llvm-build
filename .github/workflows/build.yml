@@ -21,7 +21,9 @@ jobs:
       - name: Configure LLVM
         run: |
           git clone https://github.com/llvm/llvm-project.git
-          git checkout llvmorg-${{ checkoutversion }}
+          cd llvm-project
+          git checkout llvmorg-${{ inputs.checkoutversion }}
+          cd ..
           mkdir llvm_build
           cd llvm_build
           cmake -G "Visual Studio 17 2022" ../llvm-project/llvm -Thost=x64 -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=x86_64-pc-windows-msvc -DLLVM_HOST_TRIPLE:STRING=x86_64-pc-windows-msvc -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DCMAKE_SYSTEM_VERSION=10.0.26100 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=10.0.26100 -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT
