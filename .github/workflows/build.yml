@@ -35,6 +35,7 @@ jobs:
 
     steps:
       - name: Maximize build space
+        if: matrix.os != 'windows'
         uses: easimon/maximize-build-space@master
         with:
             root-reserve-mb: 16384
