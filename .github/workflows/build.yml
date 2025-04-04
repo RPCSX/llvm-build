@@ -14,24 +14,29 @@ concurrency:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows
             arch: x64
             arch-tripple: x86_64
             runtime: MD
+            runner: windows-2025
           - os: windows
             arch: x64
             arch-tripple: x86_64
             runtime: MT
-          - os: ubuntu
+            runner: windows-2025
+          - os: linux
             arch: x64
             arch-tripple: x86_64
-          - os: ubuntu
+            runner: ubuntu-24.04
+          - os: linux
             arch: aarch64
             arch-tripple: aarch64
+            runner: ubuntu-24.04-arm
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.runtime }}
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Maximize build space
@@ -70,17 +75,9 @@ jobs:
         if: matrix.os != 'windows'
         run: cmake --build llvm_build --target=package
 
-      - name: Show packages
-        run: ls -la llvm_build
-
-      - name: Generate sha256
-        run: |
-          cd llvm_out
-          sha256sum "${{ env.PACKAGE_NAME }}.7z" | awk '{ print $1 }' > ${{ env.PACKAGE_NAME }}.tgz.sha256
-
       - name: Upload Release
         uses: actions/upload-artifact@main
         with:
-          name: ${{ env.PACKAGE_NAME }}
-          path: llvm_out/${{ env.PACKAGE_NAME }}.tgz
+          name: ${{ env.PACKAGE_NAME }}.7z
+          path: llvm_build/*.7z
           compression: 0
