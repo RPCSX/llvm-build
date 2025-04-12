@@ -169,12 +169,12 @@ jobs:
     - name: Build arm64-v8a
       run: |
         $ANDROID_SDK_ROOT/cmake/3.31.5/bin/cmake --build build-arm64-v8a --target package
-        mv build-arm64-v8a/*.7z llvm-arm64-v8a-android.7z
+        mv build-arm64-v8a/*.7z llvm-android-arm64-v8a.7z
 
     - name: Build x86-64
       run: |
         $ANDROID_SDK_ROOT/cmake/3.31.5/bin/cmake --build build-x86-64 --target package
-        mv build-x86-64/*.7z llvm-x64-android.7z
+        mv build-x86-64/*.7z llvm-android-x64.7z
 
     - name: Create release
       uses: softprops/action-gh-release@v2
@@ -183,5 +183,5 @@ jobs:
         prerelease: false
         make_latest: true
         files: |
-          llvm-arm64-v8a-android.7z
-          llvm-x64-android.7z
+          llvm-android-arm64-v8a.7z
+          llvm-android-x64.7z
