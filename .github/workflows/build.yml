@@ -38,7 +38,7 @@ jobs:
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.runtime }}
     runs-on: ${{ matrix.runner }}
     env:
-      PACKAGE_NAME: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.runtime }}
+      PACKAGE_NAME: llvm-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.runtime }}
 
     steps:
       - name: Maximize build space
@@ -74,7 +74,7 @@ jobs:
         run: cmake --build llvm_build --target=package
 
       - name: Move Package
-        run: mv llvm_build/*.7z ${{ env.PACKAGE_NAME }}
+        run: mv llvm_build/*.7z ${{ env.PACKAGE_NAME }}.7z
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
@@ -82,4 +82,102 @@ jobs:
           tag_name: ${{ inputs.checkoutversion }}
           prerelease: false
           make_latest: true
-          files: ${{ env.PACKAGE_NAME }}
+          files: ${{ env.PACKAGE_NAME }}.7z
+
+  android-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+      with:
+          root-reserve-mb: 16384
+          swap-size-mb: 16384
+          remove-dotnet: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
+    - name: Clone LLVM
+      run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: 17
+
+    - name: Install Ninja
+      run: |
+        sudo apt update
+        sudo apt install ninja-build
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install packages
+      run: yes | sdkmanager "cmake;3.31.5" "ndk;27.0.12077973"
+
+    - name: Configure arm64-v8a
+      run: |
+        $ANDROID_SDK_ROOT/cmake/3.31.5/bin/cmake \
+        -DCPACK_GENERATOR=7Z \
+        -Bbuild-arm64-v8a -DANDROID_ABI=arm64-v8a \
+        -DANDROID_PLATFORM=android-31 \
+        -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.0.12077973 \
+        -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+        -DLLVM_ENABLE_PROJECTS="mlir" \
+        -DLLVM_TARGETS_TO_BUILD="AArch64" \
+        -DLLVM_BUILD_RUNTIME=OFF \
+        -DLLVM_BUILD_TOOLS=OFF \
+        -DLLVM_INCLUDE_DOCS=OFF \
+        -DLLVM_INCLUDE_EXAMPLES=OFF \
+        -DLLVM_INCLUDE_TESTS=OFF \
+        -DLLVM_INCLUDE_BENCHMARKS=OFF \
+        -DLLVM_INCLUDE_UTILS=OFF \
+        -DLLVM_USE_INTEL_JITEVENTS=ON \
+        -DLLVM_ENABLE_Z3_SOLVER=OFF \
+        -DCMAKE_BUILD_TYPE=Release -G Ninja
+
+    - name: Configure x86-64
+      run: |
+        $ANDROID_SDK_ROOT/cmake/3.31.5/bin/cmake \
+        -DCPACK_GENERATOR=7Z \
+        -Bbuild-x86-64 -DANDROID_ABI=x86_64 \
+        -DANDROID_PLATFORM=android-31 \
+        -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.0.12077973 \
+        -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+        -DLLVM_ENABLE_PROJECTS="mlir" \
+        -DLLVM_TARGETS_TO_BUILD="X86" \
+        -DLLVM_BUILD_RUNTIME=OFF \
+        -DLLVM_BUILD_TOOLS=OFF \
+        -DLLVM_INCLUDE_DOCS=OFF \
+        -DLLVM_INCLUDE_EXAMPLES=OFF \
+        -DLLVM_INCLUDE_TESTS=OFF \
+        -DLLVM_INCLUDE_BENCHMARKS=OFF \
+        -DLLVM_INCLUDE_UTILS=OFF \
+        -DLLVM_USE_INTEL_JITEVENTS=ON \
+        -DLLVM_ENABLE_Z3_SOLVER=OFF \
+        -DCMAKE_BUILD_TYPE=Release -G Ninja
+
+    - name: Build arm64-v8a
+      run: |
+        $ANDROID_SDK_ROOT/cmake/3.31.5/bin/cmake --build build-arm64-v8a --target package
+        mv build-arm64-v8a/*.7z llvm-arm64-v8a-android.7z
+
+    - name: Build x86-64
+      run: |
+        $ANDROID_SDK_ROOT/cmake/3.31.5/bin/cmake --build build-x86-64 --target package
+        mv build-x86-64/*.7z llvm-x64-android.7z
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.checkoutversion }}
+        prerelease: false
+        make_latest: true
+        files: |
+          llvm-arm64-v8a-android.7z
+          llvm-x64-android.7z
