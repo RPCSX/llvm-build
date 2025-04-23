@@ -120,7 +120,7 @@ jobs:
 
       - name: Build LLVM (Windows)
         if: matrix.os == 'windows'
-        run: cmake --build llvm_build --config Release --target=package -- /maxcpucount
+        run: cmake --build llvm_build --config Release --target=package
 
       - name: Build LLVM (Other)
         if: matrix.os != 'windows'
