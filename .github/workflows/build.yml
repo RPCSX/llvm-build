@@ -27,6 +27,16 @@ jobs:
             arch-tripple: x86_64
             runtime: MT
             runner: windows-2025
+          - os: windows
+            arch: x64
+            arch-tripple: x86_64
+            runtime: MDd
+            runner: windows-2025
+          - os: windows
+            arch: x64
+            arch-tripple: x86_64
+            runtime: MTd
+            runner: windows-2025
           - os: linux
             arch: x64
             arch-tripple: x86_64
@@ -58,12 +68,51 @@ jobs:
       - name: Configure LLVM (Windows)
         if: matrix.os == 'windows'
         run: |
-          cmake -G "Visual Studio 17 2022" -B llvm_build -S llvm-project/llvm -DCPACK_GENERATOR=7Z -Thost=${{ matrix.arch }} -DLLVM_ENABLE_PROJECTS="clang;mlir" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-windows-msvc -DLLVM_HOST_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-${{ matrix.os }}-msvc -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF -DCMAKE_SYSTEM_VERSION=10.0.26100 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=10.0.26100 -DLLVM_USE_CRT_DEBUG=${{ matrix.runtime }}d -DLLVM_USE_CRT_RELEASE=${{ matrix.runtime }}
+          cmake \
+            -G "Visual Studio 17 2022" \
+            -B llvm_build -S llvm-project/llvm \
+            -DCPACK_GENERATOR=7Z \
+            -Thost=${{ matrix.arch }} \
+            -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+            -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+            -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-windows-msvc \
+            -DLLVM_HOST_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-${{ matrix.os }}-msvc \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_BUILD_RUNTIME=OFF \
+            -DLLVM_BUILD_TOOLS=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_USE_STATIC_ZSTD=ON \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_UTILS=OFF \
+            -DLLVM_USE_INTEL_JITEVENTS=ON \
+            -DLLVM_ENABLE_Z3_SOLVER=OFF \
+            -DCMAKE_SYSTEM_VERSION=10.0.26100 \
+            -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=10.0.26100 \
+            -DLLVM_USE_CRT_DEBUG=${{ matrix.runtime }} \
+            -DLLVM_USE_CRT_RELEASE=${{ matrix.runtime }}
 
       - name: Configure LLVM (Other)
         if: matrix.os != 'windows'
         run: |
-          cmake -B llvm_build -S llvm-project/llvm -DCMAKE_BUILD_TYPE=Release -DCPACK_GENERATOR=7Z -DLLVM_ENABLE_PROJECTS="clang;mlir" -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_INTEL_JITEVENTS=ON -DLLVM_ENABLE_Z3_SOLVER=OFF
+          cmake \
+            -B llvm_build -S llvm-project/llvm \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCPACK_GENERATOR=7Z \
+            -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+            -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_BUILD_RUNTIME=OFF \
+            -DLLVM_BUILD_TOOLS=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_USE_STATIC_ZSTD=ON \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_UTILS=OFF \
+            -DLLVM_USE_INTEL_JITEVENTS=ON \
+            -DLLVM_ENABLE_Z3_SOLVER=OFF
 
       - name: Build LLVM (Windows)
         if: matrix.os == 'windows'
@@ -141,6 +190,7 @@ jobs:
         -DLLVM_INCLUDE_UTILS=OFF \
         -DLLVM_USE_INTEL_JITEVENTS=OFF \
         -DLLVM_ENABLE_Z3_SOLVER=OFF \
+        -DLLVM_USE_STATIC_ZSTD=ON \
         -DCMAKE_BUILD_TYPE=Release -G Ninja
 
     - name: Configure x86-64
@@ -164,6 +214,7 @@ jobs:
         -DLLVM_INCLUDE_UTILS=OFF \
         -DLLVM_USE_INTEL_JITEVENTS=OFF \
         -DLLVM_ENABLE_Z3_SOLVER=OFF \
+        -DLLVM_USE_STATIC_ZSTD=ON \
         -DCMAKE_BUILD_TYPE=Release -G Ninja
 
     - name: Build arm64-v8a
