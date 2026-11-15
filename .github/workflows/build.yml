@@ -240,3 +240,89 @@ jobs:
         files: |
           llvm-android-arm64-v8a.7z
           llvm-android-x64.7z
+
+  mingw-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            arch-tripple: x86_64
+            runtime: msvcrt
+    name: mingw ${{ matrix.arch }} ${{ matrix.runtime }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      PACKAGE_NAME: llvm-mingw-${{ matrix.arch }}-${{ matrix.runtime }}
+      MINGW_PREFIX: ${{ matrix.arch-tripple }}-w64-mingw32
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+            root-reserve-mb: 16384
+            swap-size-mb: 16384
+            remove-dotnet: 'true'
+            remove-haskell: 'true'
+            remove-codeql: 'true'
+            remove-docker-images: 'true'
+
+      - name: Install MinGW toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build g++-mingw-w64-x86-64-posix libz-mingw-w64-dev
+
+      - name: Clone LLVM
+        run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
+
+      - name: Configure LLVM
+        run: |
+          cmake \
+            -G Ninja \
+            -B llvm_build -S llvm-project/llvm \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch-tripple }} \
+            -DCMAKE_C_COMPILER=$MINGW_PREFIX-gcc-posix \
+            -DCMAKE_CXX_COMPILER=$MINGW_PREFIX-g++-posix \
+            -DCMAKE_RC_COMPILER=$MINGW_PREFIX-windres \
+            -DCMAKE_AR=/usr/bin/$MINGW_PREFIX-ar \
+            -DCMAKE_RANLIB=/usr/bin/$MINGW_PREFIX-ranlib \
+            -DCMAKE_FIND_ROOT_PATH=/usr/$MINGW_PREFIX \
+            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+            -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCPACK_GENERATOR=7Z \
+            -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+            -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+            -DLLVM_BUILD_RUNTIME=OFF \
+            -DLLVM_BUILD_TOOLS=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_USE_STATIC_ZSTD=ON \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_UTILS=OFF \
+            -DLLVM_USE_INTEL_JITEVENTS=OFF \
+            -DLLVM_ENABLE_Z3_SOLVER=OFF \
+            -DLLVM_PARALLEL_LINK_JOBS=2 \
+            -DZLIB_USE_STATIC_LIBS=ON \
+            -DCMAKE_EXE_LINKER_FLAGS="-static" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-static" \
+            -DCMAKE_MODULE_LINKER_FLAGS="-static"
+
+      - name: Build LLVM
+        run: cmake --build llvm_build --target package
+
+      - name: Move Package
+        run: mv llvm_build/*.7z ${{ env.PACKAGE_NAME }}.7z
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.checkoutversion }}
+          prerelease: false
+          make_latest: true
+          files: ${{ env.PACKAGE_NAME }}.7z
