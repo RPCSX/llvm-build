@@ -186,7 +186,7 @@ jobs:
         sudo apt install ninja-build
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
 
     - name: Install packages
       run: sdkmanager "cmake;3.31.5" "ndk;27.0.12077973"
@@ -201,6 +201,7 @@ jobs:
         -DANDROID_PLATFORM=android-29 \
         -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.0.12077973 \
         -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+        -DLLVM_ENABLE_PROJECTS="lld" \
         -DLLVM_TARGETS_TO_BUILD="AArch64" \
         -DLLVM_BUILD_RUNTIME=OFF \
         -DLLVM_BUILD_TOOLS=OFF \
@@ -224,6 +225,7 @@ jobs:
         -DANDROID_PLATFORM=android-29 \
         -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.0.12077973 \
         -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
+        -DLLVM_ENABLE_PROJECTS="lld" \
         -DLLVM_TARGETS_TO_BUILD="X86" \
         -DLLVM_BUILD_RUNTIME=OFF \
         -DLLVM_BUILD_TOOLS=OFF \
