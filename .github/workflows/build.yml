@@ -25,22 +25,22 @@ jobs:
             arch: x64
             arch-tripple: x86_64
             runtime: MD
-            runner: windows-2025
+            runner: windows-2025-vs2026
           - os: windows
             arch: x64
             arch-tripple: x86_64
             runtime: MT
-            runner: windows-2025
+            runner: windows-2025-vs2026
           - os: windows
             arch: x64
             arch-tripple: x86_64
             runtime: MDd
-            runner: windows-2025
+            runner: windows-2025-vs2026
           - os: windows
             arch: x64
             arch-tripple: x86_64
             runtime: MTd
-            runner: windows-2025
+            runner: windows-2025-vs2026
           - os: linux
             arch: x64
             arch-tripple: x86_64
@@ -55,16 +55,25 @@ jobs:
       PACKAGE_NAME: llvm-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.runtime }}
 
     steps:
-      - name: Maximize build space
+      - name: Free build space
         if: matrix.os != 'windows'
-        uses: easimon/maximize-build-space@master
-        with:
-            root-reserve-mb: 16384
-            swap-size-mb: 16384
-            remove-dotnet: 'true'
-            remove-haskell: 'true'
-            remove-codeql: 'true'
-            remove-docker-images: 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          swapfile=/swapfile.build
+          if mountpoint -q /mnt; then
+            # The runner has a temp disk: build on it.
+            sudo mkdir -p /mnt/workspace
+            sudo chown "$(id -u):$(id -g)" /mnt/workspace
+            sudo mount --bind /mnt/workspace "$GITHUB_WORKSPACE"
+            swapfile=/mnt/swapfile.build
+          fi
+          sudo fallocate -l 8G "$swapfile"
+          sudo chmod 600 "$swapfile"
+          sudo mkswap "$swapfile"
+          sudo swapon "$swapfile"
+          df -h / "$GITHUB_WORKSPACE"
+          swapon --show
 
       - name: Clone LLVM
         run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
@@ -73,11 +82,11 @@ jobs:
         if: matrix.os == 'windows'
         run: |
           cmake \
-            -G "Visual Studio 17 2022" \
+            -G "Visual Studio 18 2026" \
             -B llvm_build -S llvm-project/llvm \
             -DCPACK_GENERATOR=7Z \
             -Thost=${{ matrix.arch }} \
-            -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+            -DLLVM_ENABLE_PROJECTS="clang;lld" \
             -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
             -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-windows-msvc \
             -DLLVM_HOST_TRIPLE:STRING=${{ matrix.arch-tripple }}-pc-${{ matrix.os }}-msvc \
@@ -104,7 +113,7 @@ jobs:
             -B llvm_build -S llvm-project/llvm \
             -DCMAKE_BUILD_TYPE=Release \
             -DCPACK_GENERATOR=7Z \
-            -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+            -DLLVM_ENABLE_PROJECTS="clang;lld" \
             -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_BUILD_RUNTIME=OFF \
@@ -143,15 +152,24 @@ jobs:
       contents: write
 
     steps:
-    - name: Maximize build space
-      uses: easimon/maximize-build-space@master
-      with:
-          root-reserve-mb: 16384
-          swap-size-mb: 16384
-          remove-dotnet: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
+    - name: Free build space
+      run: |
+        sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force || true
+        swapfile=/swapfile.build
+        if mountpoint -q /mnt; then
+          # The runner has a temp disk: build on it.
+          sudo mkdir -p /mnt/workspace
+          sudo chown "$(id -u):$(id -g)" /mnt/workspace
+          sudo mount --bind /mnt/workspace "$GITHUB_WORKSPACE"
+          swapfile=/mnt/swapfile.build
+        fi
+        sudo fallocate -l 8G "$swapfile"
+        sudo chmod 600 "$swapfile"
+        sudo mkswap "$swapfile"
+        sudo swapon "$swapfile"
+        df -h / "$GITHUB_WORKSPACE"
+        swapon --show
 
     - name: Clone LLVM
       run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
@@ -183,7 +201,6 @@ jobs:
         -DANDROID_PLATFORM=android-29 \
         -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.0.12077973 \
         -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
-        -DLLVM_ENABLE_PROJECTS="mlir" \
         -DLLVM_TARGETS_TO_BUILD="AArch64" \
         -DLLVM_BUILD_RUNTIME=OFF \
         -DLLVM_BUILD_TOOLS=OFF \
@@ -207,7 +224,6 @@ jobs:
         -DANDROID_PLATFORM=android-29 \
         -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.0.12077973 \
         -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake \
-        -DLLVM_ENABLE_PROJECTS="mlir" \
         -DLLVM_TARGETS_TO_BUILD="X86" \
         -DLLVM_BUILD_RUNTIME=OFF \
         -DLLVM_BUILD_TOOLS=OFF \
@@ -258,15 +274,24 @@ jobs:
       MINGW_PREFIX: ${{ matrix.arch-tripple }}-w64-mingw32
 
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-            root-reserve-mb: 16384
-            swap-size-mb: 16384
-            remove-dotnet: 'true'
-            remove-haskell: 'true'
-            remove-codeql: 'true'
-            remove-docker-images: 'true'
+      - name: Free build space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          swapfile=/swapfile.build
+          if mountpoint -q /mnt; then
+            # The runner has a temp disk: build on it.
+            sudo mkdir -p /mnt/workspace
+            sudo chown "$(id -u):$(id -g)" /mnt/workspace
+            sudo mount --bind /mnt/workspace "$GITHUB_WORKSPACE"
+            swapfile=/mnt/swapfile.build
+          fi
+          sudo fallocate -l 8G "$swapfile"
+          sudo chmod 600 "$swapfile"
+          sudo mkswap "$swapfile"
+          sudo swapon "$swapfile"
+          df -h / "$GITHUB_WORKSPACE"
+          swapon --show
 
       - name: Install MinGW toolchain
         run: |
@@ -295,7 +320,7 @@ jobs:
             -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
             -DCMAKE_BUILD_TYPE=Release \
             -DCPACK_GENERATOR=7Z \
-            -DLLVM_ENABLE_PROJECTS="clang;mlir" \
+            -DLLVM_ENABLE_PROJECTS="clang;lld" \
             -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
             -DLLVM_BUILD_RUNTIME=OFF \
             -DLLVM_BUILD_TOOLS=OFF \
