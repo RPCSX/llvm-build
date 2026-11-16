@@ -49,6 +49,10 @@ jobs:
             arch: aarch64
             arch-tripple: aarch64
             runner: ubuntu-24.04-arm
+          - os: macos
+            arch: aarch64
+            arch-tripple: arm64
+            runner: macos-15
     name: ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.runtime }}
     runs-on: ${{ matrix.runner }}
     env:
@@ -56,7 +60,7 @@ jobs:
 
     steps:
       - name: Free build space
-        if: matrix.os != 'windows'
+        if: matrix.os == 'linux'
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force || true
@@ -74,6 +78,17 @@ jobs:
           sudo swapon "$swapfile"
           df -h / "$GITHUB_WORKSPACE"
           swapon --show
+
+      - name: Free build space (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          sudo rm -rf "$HOME/Library/Android" "$HOME/.dotnet" /usr/local/share/dotnet \
+            "$HOME/.ghcup" /Users/runner/hostedtoolcache/CodeQL || true
+          df -h / "$GITHUB_WORKSPACE"
+
+      - name: Install Ninja (macOS)
+        if: matrix.os == 'macos'
+        run: brew install ninja
 
       - name: Clone LLVM
         run: git clone --depth 1 --branch llvmorg-${{ inputs.checkoutversion }} https://github.com/llvm/llvm-project.git
@@ -106,8 +121,8 @@ jobs:
             -DLLVM_USE_CRT_DEBUG=${{ matrix.runtime }} \
             -DLLVM_USE_CRT_RELEASE=${{ matrix.runtime }}
 
-      - name: Configure LLVM (Other)
-        if: matrix.os != 'windows'
+      - name: Configure LLVM (Linux)
+        if: matrix.os == 'linux'
         run: |
           cmake \
             -B llvm_build -S llvm-project/llvm \
@@ -126,6 +141,33 @@ jobs:
             -DLLVM_INCLUDE_UTILS=OFF \
             -DLLVM_USE_INTEL_JITEVENTS=ON \
             -DLLVM_ENABLE_Z3_SOLVER=OFF
+
+      - name: Configure LLVM (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          cmake \
+            -G Ninja \
+            -B llvm_build -S llvm-project/llvm \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch-tripple }} \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCPACK_GENERATOR=7Z \
+            -DLLVM_ENABLE_PROJECTS="clang;lld" \
+            -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+            -DLLVM_DEFAULT_TARGET_TRIPLE:STRING=${{ matrix.arch-tripple }}-apple-darwin \
+            -DLLVM_HOST_TRIPLE:STRING=${{ matrix.arch-tripple }}-apple-darwin \
+            -DLLVM_BUILD_RUNTIME=OFF \
+            -DLLVM_BUILD_TOOLS=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_UTILS=OFF \
+            -DLLVM_ENABLE_ZSTD=OFF \
+            -DLLVM_ENABLE_LIBXML2=OFF \
+            -DLLVM_USE_INTEL_JITEVENTS=OFF \
+            -DLLVM_ENABLE_Z3_SOLVER=OFF \
+            -DLLVM_PARALLEL_LINK_JOBS=1
 
       - name: Build LLVM (Windows)
         if: matrix.os == 'windows'
